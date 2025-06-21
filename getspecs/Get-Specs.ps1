@@ -10,10 +10,13 @@ $username = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 # Windows Version
 $osInfo = Get-CimInstance Win32_OperatingSystem
-$windowsVersion = "$($osInfo.Caption) $($osInfo.Version)"
+$OSArchitecture = $osInfo.CimInstanceProperties | Where-Object {
+	$_.Name -eq "OSArchitecture"
+}
+$windowsVersion = "$($osInfo.Caption) [$($OSArchitecture.Value)]"
 
 # Get CPU Info
-$cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 -Property Name #, NumberOfCores, NumberOfLogicalProcessors
+$cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 -Property Name
 
 # Get RAM Info
 $ram = Get-CimInstance Win32_PhysicalMemory
@@ -64,6 +67,11 @@ $printers = Get-CimInstance Win32_Printer | Where-Object {
 # Scanners
 $scanner = Get-PnpDevice -Class "Image" | Where-Object { $_.Status -eq "OK" }
 
+# Network ???
+$ips = Get-NetIPAddress | Where-Object {
+	$_.InterfaceAlias -match "^Wi-Fi|^Local area connection" -and $_.AddressState -eq "Preferred"
+}
+
 # Get Screen Size if availabe (approximation)
 function Get-ScreenSize {
 	try {
@@ -105,7 +113,6 @@ $output += "PC Name: $pcName"
 $output += "Username: $username"
 $output += "Windows Version: $windowsVersion"
 $output += "CPU: $($cpu.Name)"
-#$output += "Cores / Threads: $($cpu.NumberOfCores) / $($cpu.NumberOfLogicalProcessors)"
 $output += "RAM: $totalRamGB GB"
 $output += "GPU: $($gpu.Name)"
 $output += "Keyboard Type: $keyboardType"
@@ -144,6 +151,11 @@ if ($scanners) {
 }
 else {
 	$output += " - Non Found"
+}
+$output += ""
+$output += "IP:"
+foreach ($ip in $ips) {
+	$output += " - $($ip.InterfaceAlias): $($ip.IPAddress)"
 }
 $output += ""
 $output += "Storage Devices:"
