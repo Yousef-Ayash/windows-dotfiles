@@ -67,9 +67,9 @@ $printers = Get-CimInstance Win32_Printer | Where-Object {
 # Scanners
 $scanner = Get-PnpDevice -Class "Image" | Where-Object { $_.Status -eq "OK" }
 
-# Network ???
-$ips = Get-NetIPAddress | Where-Object {
-	$_.InterfaceAlias -match "^Wi-Fi|^Local area connection" -and $_.AddressState -eq "Preferred"
+# Network
+$activeAdapters = Get-NetIPConfiguration | Where-Object {
+	$_.IPv4Address -and $_.NetAdapter.Status -eq "Up"
 }
 
 # Get Screen Size if availabe (approximation)
@@ -153,9 +153,19 @@ else {
 	$output += " - Non Found"
 }
 $output += ""
-$output += "IP:"
-foreach ($ip in $ips) {
-	$output += " - $($ip.InterfaceAlias): $($ip.IPAddress)"
+$output += "Network:"
+
+if ($activeAdapters) {
+	foreach ($adapter in $activeAdapters) {
+		$adapterName = $adapter.InterfaceAlias
+		$ip = $adapter.IPv4Address.IPAddress
+		$type = (Get-NetAdapter -Name $adapterName).InterfaceDescription
+
+		$output += " - $adapterName ($type): $ip"
+	}
+}
+else {
+	$output += " - No active network adapters found."
 }
 $output += ""
 $output += "Storage Devices:"
